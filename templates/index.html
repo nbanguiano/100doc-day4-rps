@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Day 4 - Rock Paper Scissors</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="terminal">
+        <div id="output">
+            <div class="line">Welcome to the Rock Paper Scissors v1.0</div>
+            <div class="line">What do you choose? Type 0 for Rock, 1 for Paper, 2 for Scissors: </div>
+        </div>
+        <div class="input-line">
+            <span class="prompt">%</span>
+            <input type="text" id="terminal-input" autofocus>
+        </div>
+    </div>
+
+    <script>
+        // Get base path from Flask
+        const BASE_PATH = '{{ base_path }}';
+        
+        const terminalInput = document.getElementById('terminal-input');
+        const output = document.getElementById('output');
+        let currentStep = 1;
+        let inputs = { user: '' };
+        let waitingForNewSession = false;
+
+        function addLine(text, className = 'line') {
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = text;
+            output.appendChild(line);
+            // Scroll to bottom
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function startNewSession() {
+            currentStep = 1;
+            inputs = { user: '' };
+            waitingForNewSession = false;
+            addLine('\nWhat do you choose? Type 0 for Rock, 1 for Paper, 2 for Scissors: ');
+        }
+
+        async function submitForm() {
+            const formData = new FormData();
+            formData.append('user', inputs.user);
+            
+            try {
+                const response = await fetch(`${BASE_PATH}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                addLine(data.result, 'line result');
+                addLine('\nWould you like to play again? (Y/N)');
+                waitingForNewSession = true;
+            } catch (error) {
+                addLine('Error playing game. Please try again.');
+                startNewSession();
+            }
+        }
+
+        terminalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const inputValue = terminalInput.value.trim();
+                terminalInput.value = '';
+
+                if (waitingForNewSession) {
+                    if (inputValue.toLowerCase() === 'y') {
+                        startNewSession();
+                    } else if (inputValue.toLowerCase() === 'n') {
+                        addLine('Goodbye! Thanks for playing Rock Paper Scissors.');
+                        terminalInput.disabled = true;
+                    } else {
+                        addLine('Please enter Y or N');
+                    }
+                    return;
+                }
+
+                // Echo the command
+                addLine('% ' + inputValue);
+
+                if (currentStep === 1 && inputValue) {
+                    inputs.user = inputValue;
+                    addLine('Playing game...');
+                    submitForm();
+                }
+            }
+        });
+
+        // Auto-focus input when clicking anywhere in the terminal
+        document.querySelector('.terminal').addEventListener('click', function() {
+            terminalInput.focus();
+        });
+    </script>
+</body>
+</html> 
